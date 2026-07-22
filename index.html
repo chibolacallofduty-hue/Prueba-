@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invitación · Edith</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700;900&family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#0a0e21;
+    --navy:#141a37;
+    --navy-light:#232c56;
+    --lilac:#b9a2e0;
+    --pink:#e3aed0;
+    --gold:#cfae5c;
+    --cream:#f3eef9;
+    --line: rgba(207,174,92,0.35);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    min-height:100%;
+    background:
+      radial-gradient(ellipse at 50% 0%, #1c234a 0%, var(--navy-deep) 55%),
+      var(--navy-deep);
+    font-family:'Baloo 2', sans-serif;
+    color:var(--cream);
+    overflow-x:hidden;
+  }
+  .stage{
+    min-height:100dvh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:6vh 5vw;
+    position:relative;
+  }
+  .speck{
+    position:absolute;
+    color:var(--gold);
+    opacity:0.35;
+    font-size:14px;
+    animation:drift 9s ease-in-out infinite;
+    user-select:none;
+  }
+  @keyframes drift{
+    0%,100%{transform:translateY(0) rotate(0deg);}
+    50%{transform:translateY(-18px) rotate(8deg);}
+  }
+
+  /* ---------- ENVELOPE ---------- */
+  #envelope-wrap{
+    perspective:1400px;
+    cursor:pointer;
+    transition:opacity .6s ease;
+  }
+  #envelope-wrap.hidden{
+    opacity:0;
+    pointer-events:none;
+    position:absolute;
+  }
+  .envelope{
+    width:min(78vw, 340px);
+    aspect-ratio:1.5/1;
+    position:relative;
+  }
+  .env-body{
+    position:absolute; inset:0;
+    background:linear-gradient(160deg, var(--navy-light), var(--navy));
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.55);
+  }
+  .env-flap{
+    position:absolute;
+    top:0; left:0; width:100%; height:52%;
+    background:linear-gradient(160deg, #2a3363, var(--navy-light));
+    clip-path:polygon(0 0, 100% 0, 50% 100%);
+    transform-origin:top center;
+    transition:transform .7s cubic-bezier(.6,-0.3,.35,1.3);
+    z-index:3;
+    border-bottom:1px solid var(--line);
+  }
+  .envelope.open .env-flap{
+    transform:rotateX(178deg);
+  }
+  .seal{
+    position:absolute;
+    top:38%; left:50%;
+    transform:translate(-50%,-50%);
+    width:54px; height:54px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #d9bd77, var(--gold) 70%, #8a6f2c 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px rgba(0,0,0,0.5);
+    z-index:4;
+    transition:transform .4s ease, opacity .4s ease;
+  }
+  .envelope.open .seal{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(0.4);
+  }
+  .seal svg{width:28px; height:28px;}
+  .env-hint{
+    position:absolute;
+    bottom:-42px; left:50%; transform:translateX(-50%);
+    font-size:13px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--lilac); opacity:.8; white-space:nowrap;
+  }
+
+  /* ---------- CARD ---------- */
+  #card{
+    width:min(90vw, 400px);
+    background:linear-gradient(175deg, var(--navy-light), var(--navy) 60%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:36px 28px 32px;
+    text-align:center;
+    box-shadow:0 30px 80px rgba(0,0,0,0.6);
+    opacity:0;
+    transform:translateY(40px) scale(.96);
+    transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1);
+    position:relative;
+    max-height:90dvh;
+    overflow-y:auto;
+  }
+  #card.show{opacity:1; transform:translateY(0) scale(1);}
+
+  .badge{
+    width:60px; height:60px;
+    margin:0 auto 12px;
+  }
+  .eyebrow{
+    font-size:12px; letter-spacing:.24em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:10px;
+  }
+  h1{
+    font-family:'Cinzel Decorative', serif;
+    font-size:clamp(30px,8vw,42px);
+    color:var(--cream);
+    line-height:1.05;
+    margin-bottom:4px;
+    text-shadow:0 0 22px rgba(185,162,224,0.35);
+  }
+  .sub{
+    font-family:'Cinzel', serif;
+    font-size:13px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--pink);
+    margin-bottom:20px;
+  }
+  .divider{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin:20px 0;
+    color:var(--gold);
+  }
+  .divider::before, .divider::after{
+    content:"";
+    height:1px; width:36px;
+    background:var(--line);
+  }
+  .msg{
+    font-size:15.5px;
+    line-height:1.6;
+    color:var(--cream);
+    opacity:.9;
+    margin-bottom:6px;
+  }
+
+  .song-box{
+    margin:0 auto 18px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .song-label{
+    font-size:11.5px; letter-spacing:.1em; color:var(--lilac); opacity:.85;
+  }
+  #yt-player{border-radius:10px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.45);}
+
+  /* featured photo */
+  .feature-photo{
+    width:130px; height:130px;
+    border-radius:50%;
+    margin:6px auto 18px;
+    border:2px solid var(--gold);
+    box-shadow:0 8px 30px rgba(0,0,0,0.5);
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.03);
+    overflow:hidden;
+    cursor:pointer;
+    position:relative;
+    flex-direction:column;
+  }
+  .feature-photo img{width:100%; height:100%; object-fit:cover;}
+  .feature-photo .ph-label{
+    font-size:10.5px; color:var(--lilac); opacity:.8; padding:0 10px; text-align:center;
+  }
+  .feature-photo .ph-plus{font-size:22px; color:var(--gold); margin-bottom:2px;}
+
+  .details{
+    display:flex; flex-direction:column; gap:14px;
+    margin-bottom:8px;
+  }
+  .detail-row{
+    display:flex; align-items:center; gap:12px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    text-align:left;
+  }
+  .detail-icon{
+    flex:0 0 auto;
+    width:30px; height:30px;
+    color:var(--lilac);
+  }
+  .detail-label{
+    font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:2px;
+  }
+  .detail-value{
+    font-size:15px; color:var(--cream); font-weight:600;
+  }
+  .footer-note{
+    margin-top:20px;
+    font-size:12.5px;
+    color:var(--lilac);
+    opacity:.75;
+    font-style:italic;
+  }
+
+  /* gallery */
+  .gallery-section{margin-top:6px; text-align:left;}
+  .gallery-title{
+    font-family:'Cinzel', serif; font-size:12px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--pink); text-align:center; margin-bottom:4px;
+  }
+  .gallery-hint{
+    font-size:11.5px; color:var(--lilac); opacity:.7; text-align:center; margin-bottom:12px;
+  }
+  .gallery-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;
+    margin-bottom:12px;
+  }
+  .gallery-grid img{
+    width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px;
+    border:1px solid var(--line);
+  }
+  .add-photo-btn{
+    display:block; width:100%;
+    background:rgba(207,174,92,0.08);
+    border:1px dashed var(--gold);
+    color:var(--gold);
+    border-radius:10px;
+    padding:10px;
+    font-family:'Baloo 2', sans-serif;
+    font-size:13px;
+    cursor:pointer;
+    text-align:center;
+  }
+  #photo-input{display:none;}
+
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div id="envelope-wrap">
+      <div class="envelope" id="envelope">
+        <div class="env-body"></div>
+        <div class="env-flap"></div>
+        <div class="seal">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3 L12 21 M7 8 L17 8" stroke="#0a0e21" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M12 21 C9 18.5 5 15 5 11 C5 8.5 7 7 9 8 C10.2 8.6 11.2 9.8 12 11 C12.8 9.8 13.8 8.6 15 8 C17 7 19 8.5 19 11 C19 15 15 18.5 12 21 Z" stroke="#0a0e21" stroke-width="1.3" fill="none"/>
+          </svg>
+        </div>
+      </div>
+      <div class="env-hint">Toca para abrir</div>
+    </div>
+
+    <div id="card">
+      <svg class="badge" viewBox="0 0 64 64" fill="none">
+        <path d="M32 8 L32 56 M20 20 L44 20" stroke="#cfae5c" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M32 56 C25 50 15 41 15 32 C15 26 20 22 25 24.5 C27.8 26 30 28.8 32 32 C34 28.8 36.2 26 39 24.5 C44 22 49 26 49 32 C49 41 39 50 32 56 Z"
+              stroke="#e3aed0" stroke-width="1.8" fill="rgba(227,174,208,0.08)"/>
+      </svg>
+      <div class="eyebrow">Estás cordialmente invitada</div>
+      <h1>Edith</h1>
+      <div class="sub">Te invita a celebrar</div>
+
+      <div class="song-box">
+        <div class="song-label">Nuestra canción · toca ▶ para reproducirla</div>
+        <div id="yt-player"></div>
+      </div>
+
+      <div class="feature-photo" id="feature-photo">
+        <span class="ph-plus">+</span>
+        <span class="ph-label">Agrega tu foto favorita (o la más rara)</span>
+      </div>
+      <input type="file" id="feature-input" accept="image/*" style="display:none;">
+
+      <p class="msg">Bienvenida seas a este rincón entre nubes oscuras y corazones con espinas.<br><br>
+      Un año más de vida, y quiero celebrarlo justo como quiero: rodeada de la gente que quiero cerca.</p>
+
+      <div class="divider">✚</div>
+
+      <div class="details">
+        <div class="detail-row">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div>
+            <div class="detail-label">Fecha</div>
+            <div class="detail-value">Sábado 1 de agosto</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <div>
+            <div class="detail-label">Hora</div>
+            <div class="detail-value">12:30 pm</div>
+          </div>
+        </div>
+        <div class="detail-row">
+          <svg class="detail-icon" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="9" r="2.4" stroke="currentColor" stroke-width="1.5"/></svg>
+          <div>
+            <div class="detail-label">Lugar</div>
+            <div class="detail-value">En casa de Edith</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider">✚</div>
+
+      <div class="gallery-section">
+        <div class="gallery-title">Galería del cumpleaños</div>
+        <div class="gallery-hint">Toca "Agregar fotos" para subir imágenes desde tu celular. Se guardan y las verá cualquiera que abra este link.</div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+        <button class="add-photo-btn" id="add-photo-btn" type="button">+ Agregar fotos</button>
+        <input type="file" id="photo-input" accept="image/*" multiple>
+      </div>
+
+      <div class="footer-note">Cumplo el 29 de julio · Brindemos juntos el 1 de agosto</div>
+    </div>
+  </div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  const specksHost = document.querySelector('.stage');
+  const positions = [
+    {top:'8%',left:'10%'},{top:'15%',left:'85%'},{top:'80%',left:'8%'},
+    {top:'85%',left:'88%'},{top:'45%',left:'4%'},{top:'40%',left:'93%'}
+  ];
+  positions.forEach((p,i)=>{
+    const s = document.createElement('div');
+    s.className='speck';
+    s.textContent='✚';
+    s.style.top=p.top; s.style.left=p.left;
+    s.style.animationDelay=(i*0.9)+'s';
+    specksHost.appendChild(s);
+  });
+
+  const wrap = document.getElementById('envelope-wrap');
+  const envelope = document.getElementById('envelope');
+  const card = document.getElementById('card');
+
+  window.onYouTubeIframeAPIReady = function(){
+    new YT.Player('yt-player', {
+      height:'150', width:'260', videoId:'pAyKJAtDNCw',
+      playerVars:{ start:57, modestbranding:1, rel:0, playsinline:1 }
+    });
+  };
+
+  wrap.addEventListener('click', () => {
+    envelope.classList.add('open');
+    setTimeout(() => {
+      wrap.classList.add('hidden');
+      card.classList.add('show');
+    }, 550);
+  });
+
+  const hasStorage = (typeof window.storage !== 'undefined' && window.storage !== null);
+
+  // ---------- Foto destacada ----------
+  const featurePhoto = document.getElementById('feature-photo');
+  const featureInput = document.getElementById('feature-input');
+  const FEATURE_KEY = 'foto-portada';
+
+  if (!hasStorage){
+    featurePhoto.querySelector('.ph-label').textContent = 'Abre este link (no el archivo descargado) para subir fotos';
+    document.getElementById('add-photo-btn').textContent = 'Fotos no disponibles en esta vista';
+    document.getElementById('add-photo-btn').style.opacity = '0.5';
+    document.querySelector('.gallery-hint').textContent = 'Para subir fotos, abre la invitación desde el link (no desde el archivo HTML descargado).';
+  }
+
+  function resizeImage(file, maxDim, quality){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let {width, height} = img;
+          if (width > height && width > maxDim){ height *= maxDim/width; width = maxDim; }
+          else if (height > maxDim){ width *= maxDim/height; height = maxDim; }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function loadFeaturePhoto(){
+    try{
+      const res = await window.storage.get(FEATURE_KEY, true);
+      if (res && res.value){
+        featurePhoto.innerHTML = `<img src="${res.value}" alt="Foto de Edith">`;
+      }
+    }catch(e){ /* no hay foto todavía */ }
+  }
+
+  featurePhoto.addEventListener('click', () => { if (hasStorage) featureInput.click(); });
+  featureInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try{
+      const dataUrl = await resizeImage(file, 500, 0.75);
+      await window.storage.set(FEATURE_KEY, dataUrl, true);
+      featurePhoto.innerHTML = `<img src="${dataUrl}" alt="Foto de Edith">`;
+    }catch(err){ console.error('Error al guardar la foto:', err); }
+  });
+
+  // ---------- Galería ----------
+  const galleryGrid = document.getElementById('gallery-grid');
+  const addPhotoBtn = document.getElementById('add-photo-btn');
+  const photoInput = document.getElementById('photo-input');
+
+  async function loadGallery(){
+    try{
+      const listRes = await window.storage.list('gallery:', true);
+      if (!listRes || !listRes.keys) return;
+      for (const key of listRes.keys){
+        try{
+          const res = await window.storage.get(key, true);
+          if (res && res.value){
+            const img = document.createElement('img');
+            img.src = res.value;
+            galleryGrid.appendChild(img);
+          }
+        }catch(e){}
+      }
+    }catch(e){ /* galería vacía todavía */ }
+  }
+
+  addPhotoBtn.addEventListener('click', () => { if (hasStorage) photoInput.click(); });
+  photoInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    for (const file of files){
+      try{
+        const dataUrl = await resizeImage(file, 700, 0.72);
+        const key = 'gallery:' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+        await window.storage.set(key, dataUrl, true);
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        galleryGrid.appendChild(img);
+      }catch(err){ console.error('Error al guardar foto de galería:', err); }
+    }
+    photoInput.value = '';
+  });
+
+  if (hasStorage){
+    loadFeaturePhoto();
+    loadGallery();
+  }
+</script>
+</body>
+</html>
