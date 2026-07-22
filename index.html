@@ -205,6 +205,7 @@
     font-size:13px; line-height:1;
     display:none; align-items:center; justify-content:center;
     cursor:pointer;
+    z-index: 5;
   }
   .feature-photo.has-photo .ph-delete{display:flex;}
 
@@ -277,7 +278,6 @@
     text-align:center;
   }
   #photo-input{display:none;}
-
 </style>
 </head>
 <body>
@@ -390,11 +390,9 @@
   const db = firebase.database();
   const auth = firebase.auth();
 
-  // Autenticación anónima: necesaria para poder leer/escribir si las
-  // reglas de la base de datos exigen que el usuario esté autenticado.
-  window.dbReady = new Promise((resolve) => {
+  window.dbReady = new Promise((resolve, reject) => {
     auth.signInAnonymously().catch((err) => {
-      console.error('Error de autenticación:', err);
+      console.error('Error de autenticación anónima:', err);
     });
     auth.onAuthStateChanged((user) => {
       if (user) resolve(user);
@@ -480,7 +478,6 @@
       }
     }, (e) => {
       console.error('Error al cargar la foto:', e);
-      alert('No se pudo cargar la foto destacada. Revisa las reglas de la base de datos.');
     });
   }
 
@@ -488,17 +485,23 @@
     if (!file) return;
     try{
       await window.dbReady;
-      const dataUrl = await resizeImage(file, 500, 0.75);
+      const dataUrl = await resizeImage(file, 500, 0.7);
       await db.ref('foto-portada').set(dataUrl);
-      // El listener 'on' de loadFeaturePhoto ya actualiza el DOM.
     }catch(err){
       console.error('Error al guardar la foto:', err);
-      alert('No se pudo subir la foto. Revisa tu conexión o las reglas de la base de datos.');
+      alert('No se pudo subir la foto. Verifica que los permisos de Firebase estén configurados correctamente.');
     }
   }
 
-  featureCameraBtn.addEventListener('click', () => featureInputCamera.click());
-  featureGalleryBtn.addEventListener('click', () => featureInput.click());
+  // Permitir hacer clic directo sobre el círculo de la foto
+  featurePhoto.addEventListener('click', (e) => {
+    if (e.target !== featureDeleteBtn && !featureDeleteBtn.contains(e.target)) {
+      featureInput.click();
+    }
+  });
+
+  featureCameraBtn.addEventListener('click', (e) => { e.stopPropagation(); featureInputCamera.click(); });
+  featureGalleryBtn.addEventListener('click', (e) => { e.stopPropagation(); featureInput.click(); });
   featureInput.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInput.value=''; });
   featureInputCamera.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInputCamera.value=''; });
 
@@ -521,7 +524,7 @@
   const photoInput = document.getElementById('photo-input');
   const photoInputCamera = document.getElementById('photo-input-camera');
 
-  const galleryItems = {}; // key de Firebase -> elemento contenedor, evita duplicados
+  const galleryItems = {};
 
   function buildGalleryItem(key, dataUrl){
     const item = document.createElement('div');
@@ -551,8 +554,6 @@
   async function loadGallery(){
     try{ await window.dbReady; }catch(e){}
     const ref = db.ref('gallery');
-    // child_added: cada foto (ya existente o subida por cualquier persona
-    // en cualquier momento) aparece automáticamente, sin recargar la página.
     ref.on('child_added', (snap) => {
       if (galleryItems[snap.key]) return;
       const item = buildGalleryItem(snap.key, snap.val());
@@ -560,7 +561,6 @@
       galleryItems[snap.key] = item;
     }, (e) => {
       console.error('Error al cargar la galería:', e);
-      alert('No se pudo cargar la galería. Revisa las reglas de la base de datos.');
     });
 
     ref.on('child_removed', (snap) => {
@@ -573,17 +573,16 @@
     try{
       await window.dbReady;
     }catch(err){
-      alert('No se pudo autenticar con la base de datos. Intenta de nuevo.');
+      alert('No se pudo autenticar con la base de datos.');
       return;
     }
     for (const file of files){
       try{
-        const dataUrl = await resizeImage(file, 700, 0.72);
+        const dataUrl = await resizeImage(file, 600, 0.68);
         await db.ref('gallery').push(dataUrl);
-        // La foto aparece sola gracias al listener 'child_added' de arriba.
       }catch(err){
         console.error('Error al guardar foto de galería:', err);
-        alert('No se pudo subir una de las fotos. Revisa tu conexión o las reglas de la base de datos.');
+        alert('No se pudo subir la foto. Revisa la configuración de Firebase.');
       }
     }
   }
