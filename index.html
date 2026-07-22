@@ -196,6 +196,22 @@
     font-size:10.5px; color:var(--lilac); opacity:.8; padding:0 10px; text-align:center;
   }
   .feature-photo .ph-plus{font-size:22px; color:var(--gold); margin-bottom:2px;}
+  .ph-delete{
+    position:absolute; top:2px; right:2px;
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(10,14,33,0.75);
+    border:1px solid var(--line);
+    color:var(--cream);
+    font-size:13px; line-height:1;
+    display:none; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .feature-photo.has-photo .ph-delete{display:flex;}
+
+  .photo-actions-row{
+    display:flex; gap:8px; margin:8px 0 4px;
+  }
+  .photo-actions-row .add-photo-btn{margin:0;}
 
   .details{
     display:flex; flex-direction:column; gap:14px;
@@ -246,6 +262,8 @@
     width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:8px;
     border:1px solid var(--line);
   }
+  .gallery-item{position:relative;}
+  .gallery-item .ph-delete{display:flex;}
   .add-photo-btn{
     display:block; width:100%;
     background:rgba(207,174,92,0.08);
@@ -296,8 +314,14 @@
       <div class="feature-photo" id="feature-photo">
         <span class="ph-plus">+</span>
         <span class="ph-label">Agrega tu foto favorita (o la más rara)</span>
+        <button class="ph-delete" id="feature-delete-btn" type="button" title="Eliminar foto">✕</button>
+      </div>
+      <div class="photo-actions-row">
+        <button class="add-photo-btn" id="feature-camera-btn" type="button">📷 Tomar foto</button>
+        <button class="add-photo-btn" id="feature-gallery-btn" type="button">🖼️ Elegir de galería</button>
       </div>
       <input type="file" id="feature-input" accept="image/*" style="display:none;">
+      <input type="file" id="feature-input-camera" accept="image/*" capture="environment" style="display:none;">
 
       <p class="msg">Bienvenida seas a este rincón entre nubes oscuras y corazones con espinas.<br><br>
       Un año más de vida, y quiero celebrarlo justo como quiero: rodeada de la gente que quiero cerca.</p>
@@ -334,8 +358,12 @@
         <div class="gallery-title">Galería del cumpleaños</div>
         <div class="gallery-hint">Toca "Agregar fotos" para subir imágenes desde tu celular. Se guardan y las verá cualquiera que abra este link.</div>
         <div class="gallery-grid" id="gallery-grid"></div>
-        <button class="add-photo-btn" id="add-photo-btn" type="button">+ Agregar fotos</button>
-        <input type="file" id="photo-input" accept="image/*" multiple>
+        <div class="photo-actions-row">
+          <button class="add-photo-btn" id="add-photo-camera-btn" type="button">📷 Tomar foto</button>
+          <button class="add-photo-btn" id="add-photo-btn" type="button">🖼️ Elegir de galería</button>
+        </div>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
+        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" style="display:none;">
       </div>
 
       <div class="footer-note">Cumplo el 29 de julio · Brindemos juntos el 1 de agosto</div>
@@ -410,6 +438,10 @@
   // ---------- Foto destacada ----------
   const featurePhoto = document.getElementById('feature-photo');
   const featureInput = document.getElementById('feature-input');
+  const featureInputCamera = document.getElementById('feature-input-camera');
+  const featureCameraBtn = document.getElementById('feature-camera-btn');
+  const featureGalleryBtn = document.getElementById('feature-gallery-btn');
+  const featureDeleteBtn = document.getElementById('feature-delete-btn');
 
   function resizeImage(file, maxDim, quality){
     return new Promise((resolve, reject) => {
@@ -433,67 +465,115 @@
     });
   }
 
-  function loadFeaturePhoto(){
-    // 'on' en vez de 'once': cualquier cambio en la base de datos
-    // (subido desde este celular u otro) se refleja al instante.
+  async function loadFeaturePhoto(){
+    try{ await window.dbReady; }catch(e){}
     db.ref('foto-portada').on('value', (snap) => {
       const val = snap.val();
       if (val){
         featurePhoto.innerHTML = `<img src="${val}" alt="Foto de Edith">`;
+        featurePhoto.appendChild(featureDeleteBtn);
+        featurePhoto.classList.add('has-photo');
+      } else {
+        featurePhoto.innerHTML = `<span class="ph-plus">+</span><span class="ph-label">Agrega tu foto favorita (o la más rara)</span>`;
+        featurePhoto.appendChild(featureDeleteBtn);
+        featurePhoto.classList.remove('has-photo');
       }
-    }, (e) => console.error('Error al cargar la foto:', e));
+    }, (e) => {
+      console.error('Error al cargar la foto:', e);
+      alert('No se pudo cargar la foto destacada. Revisa las reglas de la base de datos.');
+    });
   }
 
-  featurePhoto.addEventListener('click', () => featureInput.click());
-  featureInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
+  async function uploadFeaturePhoto(file){
     if (!file) return;
     try{
       await window.dbReady;
       const dataUrl = await resizeImage(file, 500, 0.75);
       await db.ref('foto-portada').set(dataUrl);
-      // No hace falta actualizar el DOM manualmente: el listener 'on' de arriba
-      // ya lo hace en cuanto Firebase confirma el cambio.
+      // El listener 'on' de loadFeaturePhoto ya actualiza el DOM.
     }catch(err){
       console.error('Error al guardar la foto:', err);
       alert('No se pudo subir la foto. Revisa tu conexión o las reglas de la base de datos.');
     }
-    featureInput.value = '';
+  }
+
+  featureCameraBtn.addEventListener('click', () => featureInputCamera.click());
+  featureGalleryBtn.addEventListener('click', () => featureInput.click());
+  featureInput.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInput.value=''; });
+  featureInputCamera.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInputCamera.value=''; });
+
+  featureDeleteBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('¿Borrar esta foto?')) return;
+    try{
+      await window.dbReady;
+      await db.ref('foto-portada').remove();
+    }catch(err){
+      console.error('Error al borrar la foto:', err);
+      alert('No se pudo borrar la foto.');
+    }
   });
 
   // ---------- Galería ----------
   const galleryGrid = document.getElementById('gallery-grid');
   const addPhotoBtn = document.getElementById('add-photo-btn');
+  const addPhotoCameraBtn = document.getElementById('add-photo-camera-btn');
   const photoInput = document.getElementById('photo-input');
+  const photoInputCamera = document.getElementById('photo-input-camera');
 
-  const galleryImgs = {}; // key de Firebase -> elemento <img>, evita duplicados
+  const galleryItems = {}; // key de Firebase -> elemento contenedor, evita duplicados
 
-  function loadGallery(){
+  function buildGalleryItem(key, dataUrl){
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    const del = document.createElement('button');
+    del.className = 'ph-delete';
+    del.type = 'button';
+    del.title = 'Eliminar foto';
+    del.textContent = '✕';
+    del.addEventListener('click', async () => {
+      if (!confirm('¿Borrar esta foto?')) return;
+      try{
+        await window.dbReady;
+        await db.ref('gallery/' + key).remove();
+      }catch(err){
+        console.error('Error al borrar foto de galería:', err);
+        alert('No se pudo borrar la foto.');
+      }
+    });
+    item.appendChild(img);
+    item.appendChild(del);
+    return item;
+  }
+
+  async function loadGallery(){
+    try{ await window.dbReady; }catch(e){}
     const ref = db.ref('gallery');
     // child_added: cada foto (ya existente o subida por cualquier persona
     // en cualquier momento) aparece automáticamente, sin recargar la página.
     ref.on('child_added', (snap) => {
-      if (galleryImgs[snap.key]) return;
-      const img = document.createElement('img');
-      img.src = snap.val();
-      galleryGrid.appendChild(img);
-      galleryImgs[snap.key] = img;
-    }, (e) => console.error('Error al cargar la galería:', e));
+      if (galleryItems[snap.key]) return;
+      const item = buildGalleryItem(snap.key, snap.val());
+      galleryGrid.appendChild(item);
+      galleryItems[snap.key] = item;
+    }, (e) => {
+      console.error('Error al cargar la galería:', e);
+      alert('No se pudo cargar la galería. Revisa las reglas de la base de datos.');
+    });
 
     ref.on('child_removed', (snap) => {
-      const img = galleryImgs[snap.key];
-      if (img){ img.remove(); delete galleryImgs[snap.key]; }
+      const item = galleryItems[snap.key];
+      if (item){ item.remove(); delete galleryItems[snap.key]; }
     });
   }
 
-  addPhotoBtn.addEventListener('click', () => photoInput.click());
-  photoInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
+  async function uploadGalleryPhotos(files){
     try{
       await window.dbReady;
     }catch(err){
       alert('No se pudo autenticar con la base de datos. Intenta de nuevo.');
-      photoInput.value = '';
       return;
     }
     for (const file of files){
@@ -506,8 +586,12 @@
         alert('No se pudo subir una de las fotos. Revisa tu conexión o las reglas de la base de datos.');
       }
     }
-    photoInput.value = '';
-  });
+  }
+
+  addPhotoBtn.addEventListener('click', () => photoInput.click());
+  addPhotoCameraBtn.addEventListener('click', () => photoInputCamera.click());
+  photoInput.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInput.value=''; });
+  photoInputCamera.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInputCamera.value=''; });
 
   loadFeaturePhoto();
   loadGallery();
