@@ -199,13 +199,13 @@
   .ph-delete{
     position:absolute; top:2px; right:2px;
     width:24px; height:24px; border-radius:50%;
-    background:rgba(10,14,33,0.75);
+    background:rgba(10,14,33,0.85);
     border:1px solid var(--line);
     color:var(--cream);
     font-size:13px; line-height:1;
     display:none; align-items:center; justify-content:center;
     cursor:pointer;
-    z-index: 5;
+    z-index:10;
   }
   .feature-photo.has-photo .ph-delete{display:flex;}
 
@@ -374,8 +374,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
 <script>
-  // ---------- Firebase ----------
+  // ---------- Configuración de Firebase ----------
   const firebaseConfig = {
     apiKey: "AIzaSyCAcJ8Jv2WJCl3jlbwTItxESgQD_AGlJQQ",
     authDomain: "nuevo-8c7a8.firebaseapp.com",
@@ -386,20 +387,15 @@
     appId: "1:109852011535:web:01774f3680b8f4d967477a",
     measurementId: "G-R3R0M3G79M"
   };
+
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
   const auth = firebase.auth();
 
-  window.dbReady = new Promise((resolve, reject) => {
-    auth.signInAnonymously().catch((err) => {
-      console.error('Error de autenticación anónima:', err);
-    });
-    auth.onAuthStateChanged((user) => {
-      if (user) resolve(user);
-    });
-  });
-</script>
-<script>
+  // Autenticación anónima opcional en segundo plano
+  auth.signInAnonymously().catch(err => console.log('Auth status:', err.message));
+
+  // Visuales y YouTube
   const specksHost = document.querySelector('.stage');
   const positions = [
     {top:'8%',left:'10%'},{top:'15%',left:'85%'},{top:'80%',left:'8%'},
@@ -433,6 +429,36 @@
     }, 550);
   });
 
+  // ---------- Función para redimensionar y comprimir imágenes ----------
+  function resizeImage(file, maxDim = 400, quality = 0.5) {
+    return new Promise((resolve, reject) => {
+      if (!file) return reject('No se seleccionó ningún archivo');
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+          } else {
+            if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject('Error al procesar la imagen');
+      };
+      reader.onerror = () => reject('Error al leer el archivo');
+    });
+  }
+
   // ---------- Foto destacada ----------
   const featurePhoto = document.getElementById('feature-photo');
   const featureInput = document.getElementById('feature-input');
@@ -441,33 +467,10 @@
   const featureGalleryBtn = document.getElementById('feature-gallery-btn');
   const featureDeleteBtn = document.getElementById('feature-delete-btn');
 
-  function resizeImage(file, maxDim, quality){
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          let {width, height} = img;
-          if (width > height && width > maxDim){ height *= maxDim/width; width = maxDim; }
-          else if (height > maxDim){ width *= maxDim/height; height = maxDim; }
-          const canvas = document.createElement('canvas');
-          canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
-        };
-        img.onerror = reject;
-        img.src = e.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function loadFeaturePhoto(){
-    try{ await window.dbReady; }catch(e){}
+  function loadFeaturePhoto() {
     db.ref('foto-portada').on('value', (snap) => {
       const val = snap.val();
-      if (val){
+      if (val) {
         featurePhoto.innerHTML = `<img src="${val}" alt="Foto de Edith">`;
         featurePhoto.appendChild(featureDeleteBtn);
         featurePhoto.classList.add('has-photo');
@@ -476,24 +479,19 @@
         featurePhoto.appendChild(featureDeleteBtn);
         featurePhoto.classList.remove('has-photo');
       }
-    }, (e) => {
-      console.error('Error al cargar la foto:', e);
     });
   }
 
-  async function uploadFeaturePhoto(file){
+  async function uploadFeaturePhoto(file) {
     if (!file) return;
-    try{
-      await window.dbReady;
-      const dataUrl = await resizeImage(file, 500, 0.7);
+    try {
+      const dataUrl = await resizeImage(file, 400, 0.5);
       await db.ref('foto-portada').set(dataUrl);
-    }catch(err){
-      console.error('Error al guardar la foto:', err);
-      alert('No se pudo subir la foto. Verifica que los permisos de Firebase estén configurados correctamente.');
+    } catch (err) {
+      alert('Error al subir foto: ' + (err.message || err));
     }
   }
 
-  // Permitir hacer clic directo sobre el círculo de la foto
   featurePhoto.addEventListener('click', (e) => {
     if (e.target !== featureDeleteBtn && !featureDeleteBtn.contains(e.target)) {
       featureInput.click();
@@ -502,18 +500,16 @@
 
   featureCameraBtn.addEventListener('click', (e) => { e.stopPropagation(); featureInputCamera.click(); });
   featureGalleryBtn.addEventListener('click', (e) => { e.stopPropagation(); featureInput.click(); });
-  featureInput.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInput.value=''; });
-  featureInputCamera.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInputCamera.value=''; });
+  featureInput.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInput.value = ''; });
+  featureInputCamera.addEventListener('change', (e) => { uploadFeaturePhoto(e.target.files[0]); featureInputCamera.value = ''; });
 
   featureDeleteBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
     if (!confirm('¿Borrar esta foto?')) return;
-    try{
-      await window.dbReady;
+    try {
       await db.ref('foto-portada').remove();
-    }catch(err){
-      console.error('Error al borrar la foto:', err);
-      alert('No se pudo borrar la foto.');
+    } catch (err) {
+      alert('Error al borrar foto: ' + (err.message || err));
     }
   });
 
@@ -526,7 +522,7 @@
 
   const galleryItems = {};
 
-  function buildGalleryItem(key, dataUrl){
+  function buildGalleryItem(key, dataUrl) {
     const item = document.createElement('div');
     item.className = 'gallery-item';
     const img = document.createElement('img');
@@ -536,14 +532,13 @@
     del.type = 'button';
     del.title = 'Eliminar foto';
     del.textContent = '✕';
-    del.addEventListener('click', async () => {
+    del.addEventListener('click', async (e) => {
+      e.stopPropagation();
       if (!confirm('¿Borrar esta foto?')) return;
-      try{
-        await window.dbReady;
+      try {
         await db.ref('gallery/' + key).remove();
-      }catch(err){
-        console.error('Error al borrar foto de galería:', err);
-        alert('No se pudo borrar la foto.');
+      } catch (err) {
+        alert('Error al borrar: ' + (err.message || err));
       }
     });
     item.appendChild(img);
@@ -551,46 +546,37 @@
     return item;
   }
 
-  async function loadGallery(){
-    try{ await window.dbReady; }catch(e){}
+  function loadGallery() {
     const ref = db.ref('gallery');
     ref.on('child_added', (snap) => {
       if (galleryItems[snap.key]) return;
       const item = buildGalleryItem(snap.key, snap.val());
       galleryGrid.appendChild(item);
       galleryItems[snap.key] = item;
-    }, (e) => {
-      console.error('Error al cargar la galería:', e);
     });
 
     ref.on('child_removed', (snap) => {
       const item = galleryItems[snap.key];
-      if (item){ item.remove(); delete galleryItems[snap.key]; }
+      if (item) { item.remove(); delete galleryItems[snap.key]; }
     });
   }
 
-  async function uploadGalleryPhotos(files){
-    try{
-      await window.dbReady;
-    }catch(err){
-      alert('No se pudo autenticar con la base de datos.');
-      return;
-    }
-    for (const file of files){
-      try{
-        const dataUrl = await resizeImage(file, 600, 0.68);
+  async function uploadGalleryPhotos(files) {
+    if (!files || files.length === 0) return;
+    for (const file of files) {
+      try {
+        const dataUrl = await resizeImage(file, 400, 0.5);
         await db.ref('gallery').push(dataUrl);
-      }catch(err){
-        console.error('Error al guardar foto de galería:', err);
-        alert('No se pudo subir la foto. Revisa la configuración de Firebase.');
+      } catch (err) {
+        alert('Error al subir una de las imágenes: ' + (err.message || err));
       }
     }
   }
 
   addPhotoBtn.addEventListener('click', () => photoInput.click());
   addPhotoCameraBtn.addEventListener('click', () => photoInputCamera.click());
-  photoInput.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInput.value=''; });
-  photoInputCamera.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInputCamera.value=''; });
+  photoInput.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInput.value = ''; });
+  photoInputCamera.addEventListener('change', (e) => { uploadGalleryPhotos(Array.from(e.target.files)); photoInputCamera.value = ''; });
 
   loadFeaturePhoto();
   loadGallery();
